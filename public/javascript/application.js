@@ -31,7 +31,7 @@ var svg = d3.select(".dependency_graph svg"),
     namespaces = definitions.map(function(d){ return d.id; }),
     relations = data.relations.map(function(d){ return {source: d.caller, target: d.resolved_namespace, circular: d.circular}; }),
     max_lines = _.maxBy(definitions, 'lines').lines,
-    max_circle_r = 50;
+    max_circle_r = 1000;
 
 relations = relations.filter(function(d){
   return namespaces.indexOf(d.source) >= 0 && namespaces.indexOf(d.target) >= 0;
@@ -46,12 +46,47 @@ var zoom = d3.zoom()
 svg.call(zoom)
   .on("dblclick.zoom", null);
 
+function parsePath(path) {
+  return path.split("/")
+}
+
+function calcStrength (link) {
+  console.log("link", link);
+  console.log("source", link.source.files[0]);
+  console.log("target", link.target.files[0]);
+  const path_difference = _.difference(parsePath(link.source.files[0]), parsePath(link.target.files[0]));
+  console.log("path_difference", path_difference);
+  const directory_difference = path_difference.length - 1;
+  console.log("directory_difference", directory_difference);
+  const strength = 1 - directory_difference * 0.25;
+  console.log("strength", strength);
+  // return 1;
+  return strength;
+};
+
+
+function calcDistance (link) {
+  console.log("link", link);
+  console.log("source", link.source.files[0]);
+  console.log("target", link.target.files[0]);
+  const path_difference = _.difference(parsePath(link.source.files[0]), parsePath(link.target.files[0]));
+  console.log("path_difference", path_difference);
+  const directory_difference = path_difference.length - 1;
+  console.log("directory_difference", directory_difference);
+  const distance = 100 + directory_difference * 100;
+  console.log("distance", distance);
+  // return 1;
+  return distance;
+};
+
+
 var container = svg.append('g'),
     simulation = d3.forceSimulation()
-    .force("link", d3.forceLink().id(function(d) { return d.id; }))
-    .force("charge", d3.forceManyBody())
+    .force("link", d3.forceLink().id(function(d) { return d.id; }).strength(calcStrength).distance(calcDistance))
+    // .force("link", d3.forceLink().id(function(d) { return d.id; }).strength(calcStrength).distance(calcDistance))
+    .force("charge", d3.forceManyBody().strength(-100000))
     .force("center", d3.forceCenter(width / 2, height / 2))
-    .force("forceCollide", d3.forceCollide(80));
+    .force("forceCollide", d3.forceCollide(150));
 
 simulation
   .nodes(definitions)
@@ -59,6 +94,17 @@ simulation
 
 simulation.force("link")
   .links(relations);
+
+function addStyle (d) {
+  // console.log("d", d);
+  // console.log("d.lines", d.lines);
+  // console.log("max_lines", max_lines);
+  // console.log("size", size);
+  let size = d.lines / max_lines * 120 + 18;
+  // let size = d.lines + 12;
+
+  return `font-size: ${size}px`;
+};
 
 var link = container.append("g")
     .attr("class", "links")
@@ -87,6 +133,7 @@ var link = container.append("g")
     text = node
     .append("text")
     .attr("class", "namespace")
+    .attr("style", addStyle) 
     .attr("x", function(d) { return d.lines / max_lines * max_circle_r + 8; })
     .attr("y", ".31em")
     .text(function(d) { return d.id; });
