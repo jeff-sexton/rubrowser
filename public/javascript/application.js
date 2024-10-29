@@ -6,94 +6,167 @@ var svg = d3.select(".dependency_graph svg"),
     $svg = $('.dependency_graph svg'),
     width = $svg.width(),
     height = $svg.height(),
-    drag = d3.drag()
-    .on("start", dragstarted)
-    .on("drag", dragged)
-    .on("end", dragended),
+    // drag = d3.drag()
+    // .on("start", dragstarted)
+    // .on("drag", dragged)
+    // .on("end", dragended),
     dup_definitions = data.definitions.map(function(d){
       return {
         id: d.namespace,
         file: d.file,
         type: d.type,
         lines: d.lines,
+        line: d.line,
         circular: d.circular
       };
     }),
     definitions = _(dup_definitions).groupBy('id').map(function(group) {
+      const files = group.map(function(d){ return d.file; })
+      const directory = files[0].split("/").slice(0, -1).join("/");
       return {
         id: group[0].id,
+        name: group[0].id,
         type: group[0].type,
         lines: _(group).sumBy('lines'),
+        line: group[0].line, // Is this the correct definition line?
         circular: group[0].circular,
-        files: group.map(function(d){ return d.file; })
+        files: files,
+        directory: directory,
       };
     }).value(),
     namespaces = definitions.map(function(d){ return d.id; }),
     relations = data.relations.map(function(d){ return {source: d.caller, target: d.resolved_namespace, circular: d.circular}; }),
     max_lines = _.maxBy(definitions, 'lines').lines,
-    max_circle_r = 1000;
+    max_circle_r = 100;
 
+/* 
+  Relation Format:
+  {  
+    type: demoularize(relation.class.name),
+    namespace: relation.namespace.to_s,
+    resolved_namespace: relation.resolve(definitions).to_s,
+    caller: relation.caller_namespace.to_s,
+    file: relation.file,
+    circular: relation.circular?,
+    line: relation.line 
+  }
+*/
+
+function definitionIndex (definitionId) {
+  return definitions.findIndex((definition) => definition.id === definitionId);
+}
+
+const formatted_lines = data.relations.map((relation) => {
+  return {
+    type: relation.type,
+    sourceName: relation.caller,
+    source: definitionIndex(relation.caller),
+    targetName: relation.resolved_namespace,
+    target: definitionIndex(relation.resolved_namespace),
+    file: relation.file,
+    line: relation.line,
+    circular: relation.circular,
+  }
+}).filter((relation) => {
+  return namespaces.indexOf(relation.source.id) >= 0 && namespaces.indexOf(relation.target.id) >= 0;
+})
+
+const lines = _.uniqWith(formatted_lines, _.isEqual);
+
+lines.forEach((line) => {
+  console.log("line", line);
+});
+
+
+// definitions.forEach((definition) => {
+//   console.log("definition", definition);
+// });
 relations = relations.filter(function(d){
   return namespaces.indexOf(d.source) >= 0 && namespaces.indexOf(d.target) >= 0;
 });
 relations = _.uniqWith(relations, _.isEqual);
 
-var zoom = d3.zoom()
-    .on("zoom", function () {
-      container.attr("transform", d3.event.transform);
-    });
 
-svg.call(zoom)
-  .on("dblclick.zoom", null);
+// relations.forEach((relation) => {
+//   console.log("relation", relation);
+// });
 
-function parsePath(path) {
-  return path.split("/")
-}
+// var zoom = d3.zoom()
+//     .on("zoom", function () {
+//       container.attr("transform", d3.event.transform);
+//     });
 
-function calcStrength (link) {
-  console.log("link", link);
-  console.log("source", link.source.files[0]);
-  console.log("target", link.target.files[0]);
-  const path_difference = _.difference(parsePath(link.source.files[0]), parsePath(link.target.files[0]));
-  console.log("path_difference", path_difference);
-  const directory_difference = path_difference.length - 1;
-  console.log("directory_difference", directory_difference);
-  const strength = 1 - directory_difference * 0.25;
-  console.log("strength", strength);
-  // return 1;
-  return strength;
-};
+// svg.call(zoom)
+//   .on("dblclick.zoom", null);
 
+// function parsePath(path) {
+//   return path.split("/")
+// }
 
-function calcDistance (link) {
-  console.log("link", link);
-  console.log("source", link.source.files[0]);
-  console.log("target", link.target.files[0]);
-  const path_difference = _.difference(parsePath(link.source.files[0]), parsePath(link.target.files[0]));
-  console.log("path_difference", path_difference);
-  const directory_difference = path_difference.length - 1;
-  console.log("directory_difference", directory_difference);
-  const distance = 100 + directory_difference * 100;
-  console.log("distance", distance);
-  // return 1;
-  return distance;
-};
+// function calcStrength (link) {
+//   console.log("link", link);
+//   console.log("source", link.source.files[0]);
+//   console.log("target", link.target.files[0]);
+//   const path_difference = _.difference(parsePath(link.source.files[0]), parsePath(link.target.files[0]));
+//   console.log("path_difference", path_difference);
+//   const directory_difference = path_difference.length - 1;
+//   console.log("directory_difference", directory_difference);
+//   const strength = 1 - directory_difference * 0.25;
+//   console.log("strength", strength);
+//   // return 1;
+//   return strength;
+// };
 
 
-var container = svg.append('g'),
-    simulation = d3.forceSimulation()
-    .force("link", d3.forceLink().id(function(d) { return d.id; }).strength(calcStrength).distance(calcDistance))
-    // .force("link", d3.forceLink().id(function(d) { return d.id; }).strength(calcStrength).distance(calcDistance))
-    .force("charge", d3.forceManyBody().strength(-100000))
-    .force("center", d3.forceCenter(width / 2, height / 2))
-    .force("forceCollide", d3.forceCollide(150));
+// function calcDistance (link) {
+//   console.log("link", link);
+//   console.log("source", link.source.files[0]);
+//   console.log("target", link.target.files[0]);
+//   const path_difference = _.difference(parsePath(link.source.files[0]), parsePath(link.target.files[0]));
+//   console.log("path_difference", path_difference);
+//   const directory_difference = path_difference.length - 1;
+//   console.log("directory_difference", directory_difference);
+//   const distance = 100 + directory_difference * 100;
+//   console.log("distance", distance);
+//   // return 1;
+//   return distance;
+// };
 
+const container = svg.append('g');
+
+// const simulation = d3.forceSimulation()
+//   .force("link", d3.forceLink().id(function(d) { return d.id; }).strength(calcStrength).distance(calcDistance))
+//   // .force("link", d3.forceLink().id(function(d) { return d.id; }).strength(calcStrength).distance(calcDistance))
+//   .force("charge", d3.forceManyBody().strength(-100000))
+//   .force("center", d3.forceCenter(width / 2, height / 2))
+//   .force("forceCollide", d3.forceCollide(150));
+
+// simulation
+//   .nodes(definitions)
+//   .on("tick", ticked);
+
+// simulation.force("link")
+//   .links(relations);
+
+const simulation = d3.forceSimulation()
+  .force("charge", d3.forceManyBody())
+  .force("x", d3.forceX(width / 2).strength(0.05))
+  .force("y", d3.forceY(height / 2).strength(0.05));
+
+// Instantiate the forceInABox force
+const groupingForce = forceInABox()
+  .strength(0.1) // Strength to foci
+  .template("force") // Either treemap or force
+  .groupBy("directory") // Node attribute to group
+  .links(lines) // The graph links. Must be called after setting the grouping attribute
+  .size([width, height]); // Size of the chart
+
+// Add your forceInABox to the simulation
 simulation
   .nodes(definitions)
-  .on("tick", ticked);
-
-simulation.force("link")
-  .links(relations);
+  .force("group", groupingForce)
+  .force("link", d3.forceLink(lines).distance(50).strength(groupingForce.getLinkStrength)) // default link force will try to join nodes in the same group stronger than if they are in different groups
+  // .on("tick", ticked);
 
 function addStyle (d) {
   // console.log("d", d);
@@ -103,6 +176,7 @@ function addStyle (d) {
   let size = d.lines / max_lines * 120 + 18;
   // let size = d.lines + 12;
 
+  size = 12
   return `font-size: ${size}px`;
 };
 
@@ -118,8 +192,8 @@ var link = container.append("g")
     .selectAll("g")
     .data(definitions)
     .enter().append("g")
-    .call(drag)
-    .on("dblclick", dblclick),
+    // .call(drag)
+    // .on("dblclick", dblclick),
     circle = node
     .append("circle")
     .attr("r", function(d) { return d.lines / max_lines * max_circle_r + 6; })
@@ -250,4 +324,4 @@ window.rubrowser = {
   state: state
 };
 
-rubrowser.state.set(layout);
+// rubrowser.state.set(layout);

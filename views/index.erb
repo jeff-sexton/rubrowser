@@ -20,6 +20,12 @@
      var data = <%= data %>;
      var layout = <%= layout %>;
     </script>
+    <!-- Include d3.v6 or forceSimulation -->
+    <%# <script
+      type="text/javascript"
+      src="https://unpkg.com/force-in-a-box/dist/forceInABox.js"
+    ></script> %>
+    <script type='text/javascript'><%= file('javascript/forceInABox.js') %></script>
     <script type='text/javascript'><%= file('javascript/application.js') %></script>
 
     <% if toolbox? %>
