@@ -1,121 +1,26 @@
-var classForCircular = function(d) {
-  return d.circular ? 'circular' : '';
-};
-// const color = d3.scaleOrdinal(d3.schemeCategory10);
+// Setup graph data
+const graph = parseData(data);
+const { nodes, links, namespaces } = graph;
 
-var svg = d3.select(".dependency_graph svg");
+const max_lines = _.maxBy(nodes, 'lines').lines;
 
-var $svg = $('.dependency_graph svg');
+const max_circle_r = 20;
 
-var width = $svg.width();
+// Setup SVG
 
-var height = $svg.height();
+const svg = d3.select(".dependency_graph svg");
 
-console.log("width", width);
-console.log("height", height);
+const $svg = $('.dependency_graph svg');
 
-// var width = 1440,
-//     height = 1440;
+const width = $svg.width();
 
-// var svg = d3.select(".dependency_graph svg")
-//     .attr("width", width)
-//     .attr("height", height);
-
-var drag = d3.drag()
-  .on("start", dragstarted)
-  .on("drag", dragged)
-  .on("end", dragended);
-
-var dup_definitions = data.definitions.map(function(d){
-  return {
-    id: d.namespace,
-    file: d.file,
-    type: d.type,
-    lines: d.lines,
-    line: d.line,
-    circular: d.circular
-  };
-});
-
-var definitions = _(dup_definitions).groupBy('id').map(function(group) {
-  const files = group.map(function(d){ return d.file; })
-  const directory = files[0].split("/").slice(0, -1).join("/");
-  return {
-    id: group[0].id,
-    name: group[0].id,
-    type: group[0].type,
-    lines: _(group).sumBy('lines'),
-    line: group[0].line, // Is this the correct definition line?
-    circular: group[0].circular,
-    files: files,
-    directory: directory,
-  };
-}).value();
-
-var namespaces = definitions.map(function(d){ return d.id; });
-
-var relations = data.relations.map(function(d){ return {source: d.caller, target: d.resolved_namespace, circular: d.circular}; });
-
-var max_lines = _.maxBy(definitions, 'lines').lines;
-
-var max_circle_r = 20;
-
-/* 
-  Relation Format:
-  {  
-    type: demoularize(relation.class.name),
-    namespace: relation.namespace.to_s,
-    resolved_namespace: relation.resolve(definitions).to_s,
-    caller: relation.caller_namespace.to_s,
-    file: relation.file,
-    circular: relation.circular?,
-    line: relation.line 
-  }
-*/
-
-function definitionIndex (definitionId) {
-  return definitions.findIndex((definition) => definition.id === definitionId);
-}
-
-const formatted_lines = data.relations.map((relation) => {
-  return {
-    type: relation.type,
-    sourceName: relation.caller,
-    source: definitionIndex(relation.caller),
-    targetName: relation.resolved_namespace,
-    target: definitionIndex(relation.resolved_namespace),
-    file: relation.file,
-    line: relation.line,
-    circular: relation.circular,
-  }
-}).filter((relation) => {
-  return namespaces.indexOf(relation.sourceName) >= 0 && namespaces.indexOf(relation.targetName) >= 0;
-})
-
-const lines = _.uniqWith(formatted_lines, _.isEqual);
-
-// lines.forEach((line) => {
-//   console.log("line", line);
-// });
-
-
-// definitions.forEach((definition) => {
-//   console.log("definition", definition);
-// });
-relations = relations.filter(function(d){
-  return namespaces.indexOf(d.source) >= 0 && namespaces.indexOf(d.target) >= 0;
-});
-relations = _.uniqWith(relations, _.isEqual);
-
-
-// relations.forEach((relation) => {
-//   console.log("relation", relation);
-// });
+const height = $svg.height();
 
 const container = svg.append('g')
 
 let currentScale = 1;
-var zoom = d3.zoom()
+
+const zoom = d3.zoom()
     .on("zoom", function () {
       currentScale = d3.event.transform.k;
       container.attr("transform", d3.event.transform);
@@ -123,6 +28,11 @@ var zoom = d3.zoom()
 
 svg.call(zoom)
   .on("dblclick.zoom", null);
+
+const drag = d3.drag()
+  .on("start", dragstarted)
+  .on("drag", dragged)
+  .on("end", dragended);
 
 // function parsePath(path) {
 //   return path.split("/")
@@ -180,7 +90,7 @@ const groupingForce = forceInABox()
   .groupBy("directory") // Node attribute to group
   // .strength(forceInABoxStrength) // Strength to foci
   .strength(0.1) // Strength to foci
-  .links(lines) // The graph links. Must be called after setting the grouping attribute
+  .links(links) // The graph links. Must be called after setting the grouping attribute
   .enableGrouping(true)
   // .linkStrengthInterCluster(linkStrengthInterCluster) // linkStrength between nodes of different clusters
   .linkStrengthInterCluster(0.001) // linkStrength between nodes of different clusters
@@ -195,24 +105,25 @@ const groupingForce = forceInABox()
   // .forceNodeSize(forceNodeSize) // Used to compute the template force nodes size (Force template only)
   // .forceNodeSize(10) // Used to compute the template force nodes size (Force template only)
 
+// Setup Simulation
 const simulation = d3.forceSimulation()
-  .nodes(definitions)
+  .nodes(nodes)
   .force("group", groupingForce)
   .force("charge", d3.forceManyBody().strength(-1000))
-  .force("link", d3.forceLink(lines).distance(2).strength(groupingForce.getLinkStrength))
+  .force("link", d3.forceLink(links).distance(2).strength(groupingForce.getLinkStrength))
   .force("center", d3.forceCenter(width / 2, height / 2))
   .force("x", d3.forceX(width / 2))
   .force("y", d3.forceY(height / 2))
   .force("forceCollide", d3.forceCollide(80))
 
 simulation.on("tick", function() {
-  link.attr("x1", function(d) { return d.source.x; })
+  svg_links.attr("x1", function(d) { return d.source.x; })
       .attr("y1", function(d) { return d.source.y; })
       .attr("x2", function(d) { return d.target.x; })
       .attr("y2", function(d) { return d.target.y; })
       .attr("style", `stroke-width: ${1.5 / currentScale}px`);
 
-  node.attr("cx", function(d) { return d.x; })
+  svg_nodes.attr("cx", function(d) { return d.x; })
       .attr("cy", function(d) { return d.y; })
       .attr("transform", transform);
 });
@@ -221,112 +132,47 @@ function transform(d) {
   return "translate(" + d.x + "," + d.y + ")";
 }
 
-function addStyle (d) {
-  // console.log("d", d);
-  // console.log("d.lines", d.lines);
-  // console.log("max_lines", max_lines);
-  // console.log("size", size);
-  let size = d.lines / max_lines * 120 + 18;
-  // let size = d.lines + 12;
+// Add SVG Elements
 
-  size = 12
-  return `font-size: ${size}px`;
-};
-
-// var link = svg.selectAll(".link")
-//     .data(lines)
-//   .enter().append("line")
-//     .attr("class", "link")
-//     .style("stroke-width", function(d) { return Math.sqrt(d.value); });
-
-// var link = container.append("g")
-//     .attr("class", "links")
-//     .selectAll("path")
-//     .data(relations)
-//     .enter().append("path")
-//     .attr("class", function(d) { return 'link ' + classForCircular(d); })
-//     .attr("marker-end", function(d){ return "url(#" + d.target.id + ")"; })
-
-var link = container.append("g")
-    .attr("class", "links")
-    .selectAll(".link")
-    .data(lines)
-    .enter().append("line")
-    .attr("class", function(d) { return 'link ' + classForCircular(d); })
-    // .attr("marker-end", function(d){ return "url(#" + d.target.id + ")"; });
-
-// var node = svg.selectAll(".node")
-//     .data(definitions)
-//   .enter().append("circle")
-//     .attr("class", "node")
-//     .attr("r", 5)
-//     .style("fill", function(d) { return color(d.group); })
-//     .call(d3.drag()
-//               .on("start", dragstarted)
-//               .on("drag", dragged)
-//               .on("end", dragended));
-
-// node.append("title")
-//     .text(function(d) { return d.id; });
-
-
-
-// node = container.append("g")
-// .attr("class", "nodes")
-// .selectAll("g")
-// .data(definitions)
-// .enter().append("g")
-// // .call(drag)
-// // .on("dblclick", dblclick),
-// circle = node
-// .append("circle")
-// .attr("r", function(d) { return d.lines / max_lines * max_circle_r + 6; })
-// .attr("class", function (d) { return classForCircular(d) ; }),
-// type = node
-// .append("text")
-// .attr("class", "type")
-// .attr("x", "-0.4em")
-// .attr("y", "0.4em")
-// .text(function(d) { return d.type[0]; }),
-// text = node
-// .append("text")
-// .attr("class", "namespace")
-// .attr("style", addStyle) 
-// .attr("x", function(d) { return d.lines / max_lines * max_circle_r + 8; })
-// .attr("y", ".31em")
-// .text(function(d) { return d.id; });
-
-var node = container.append("g")
+const svg_nodes = container.append("g")
     .attr("class", "nodes")
     .selectAll(".node")
-    .data(definitions)
+    .data(nodes)
     .enter().append("g")
     .attr("class", "node")
     .call(drag)
     .on("dblclick", dblclick);
 
-var circle = node
+const circle = svg_nodes
     .append("circle")
     .attr("r", function(d) { return d.lines / max_lines * max_circle_r + 6; })
     .attr("class", function (d) { return `node-circle ${classForCircular(d)}` ; });
 
-var type = node
+const type = svg_nodes
     .append("text")
     .attr("class", "type")
     .attr("x", "-0.4em")
     .attr("y", "0.4em")
     .text(function(d) { return d.type[0]; });
 
-var text = node
+const text = svg_nodes
     .append("text")
     .attr("class", "namespace")
-    .attr("style", addStyle) 
+    .attr("style", addTextStyle) 
     .attr("x", function(d) { return d.lines / max_lines * max_circle_r + 8; })
     .attr("y", ".31em")
     .text(function(d) { return d.id; });
 
+const svg_links = container.append("g")
+    .attr("class", "links")
+    .selectAll(".link")
+    .data(links)
+    .enter().append("line")
+    .attr("class", function(d) { return 'link ' + classForCircular(d); })
+    // .attr("marker-end", function(d){ return "url(#" + d.target.id + ")"; });
+
 container.append("defs").selectAll("marker")
-  .data(definitions)
+  .data(nodes)
   .enter().append("marker")
   .attr("id", function(d) { return d.id; })
   .attr("viewBox", "0 -5 10 10")
@@ -338,7 +184,171 @@ container.append("defs").selectAll("marker")
   .append("path")
   .attr("d", "M0,-5L10,0L0,5");
 
+// Set up Listeners
 
+svg_nodes.on('mouseover', function(d) {
+  const relatives = [];
+  svg_links.classed('downlighted', (l) => {
+    if (d === l.source || d === l.target){
+      relatives.push(l.source);
+      relatives.push(l.target);
+      return false;
+    }else{
+      return true;
+    }
+  });
+  svg_nodes.classed('downlighted', (n) => {
+    return !(n == d || relatives.indexOf(n) > -1);
+  });
+});
+
+svg_nodes.on('mouseout', function() {
+  svg_links.classed('downlighted', false);
+  svg_nodes.classed('downlighted', false);
+});
+
+// Set up global variables
+const state = {
+  get: () => {
+    const positions = [];
+    rubrowser.nodes.forEach((elem) => {
+      if( elem.fx !== undefined && elem.fy !== undefined) {
+        positions.push({
+          id: elem.id,
+          x: elem.fx,
+          y: elem.fy
+        });
+      }
+    });
+    return positions;
+  },
+
+  set: (layout) => {
+    if ( !layout ) { return; }
+    layout.forEach((pos) => {
+      var definition = node.filter(function(e) { return e.id == pos.id; })
+      definition.classed("fixed", true);
+
+      var datum = definition.data()[0]
+      if( datum ) {
+        datum.fx = pos.x
+        datum.fy = pos.y
+      }
+    });
+  }
+}
+
+window.rubrowser = {
+  data: data,
+  nodes: nodes,
+  links: links,
+  simulation: simulation,
+  groupingForce: groupingForce,
+  svg_nodes: svg_nodes,
+  svg_links: svg_links,
+  state: state
+};
+
+rubrowser.state.set(layout);
+
+// const gTemplate = container.append("g").attr("class", "template");
+
+// simulation.force("group").drawTemplate(gTemplate);
+
+simulation.alphaTarget(0.5).restart();
+
+// End of Script --------------------------------
+
+// Function definitions
+function indexForNode (nodeId, nodes) {
+  return nodes.findIndex((node) => node.id === nodeId);
+}
+
+function parseData(data) {
+
+  const dup_definitions = data.definitions.map((d) => {
+    return {
+      id: d.namespace,
+      file: d.file,
+      type: d.type,
+      lines: d.lines,
+      line: d.line,
+      circular: d.circular
+    };
+  });
+
+  const nodes = _(dup_definitions).groupBy('id').map((group) => {
+    const files = group.map(function(d){ return d.file; })
+    const directory = files[0].split("/").slice(0, -1).join("/");
+    return {
+      id: group[0].id,
+      name: group[0].id,
+      type: group[0].type,
+      lines: _(group).sumBy('lines'),
+      line: group[0].line, // Is this the correct definition line?
+      circular: group[0].circular,
+      files: files,
+      directory: directory,
+    };
+  }).value();
+
+
+  const namespaces = nodes.map((d) => d.id );
+
+  /* 
+  Relation Format:
+  {  
+    type: demoularize(relation.class.name),
+    namespace: relation.namespace.to_s,
+    resolved_namespace: relation.resolve(definitions).to_s,
+    caller: relation.caller_namespace.to_s,
+    file: relation.file,
+    circular: relation.circular?,
+    line: relation.line 
+  }
+*/
+
+const formatted_links = data.relations.map((relation) => {
+  return {
+    type: relation.type,
+    sourceName: relation.caller,
+    source: indexForNode(relation.caller, nodes),
+    targetName: relation.resolved_namespace,
+    target: indexForNode(relation.resolved_namespace, nodes),
+    file: relation.file,
+    line: relation.line,
+    circular: relation.circular,
+  }
+}).filter((relation) => {
+  return namespaces.indexOf(relation.sourceName) >= 0 && namespaces.indexOf(relation.targetName) >= 0;
+})
+
+const links = _.uniqWith(formatted_links, _.isEqual);
+
+
+  return {
+    nodes: nodes,
+    links: links,
+    namespaces: namespaces,
+  }
+
+}
+
+function classForCircular (d) {
+  return d.circular ? 'circular' : '';
+};
+
+function addTextStyle (d) {
+  // console.log("d", d);
+  // console.log("d.lines", d.lines);
+  // console.log("max_lines", max_lines);
+  // console.log("size", size);
+  let size = d.lines / max_lines * 120 + 18;
+  // let size = d.lines + 12;
+
+  size = 12
+  return `font-size: ${size}px`;
+};
 
 function dragstarted(d) {
   if (!d3.event.active) simulation.alphaTarget(0.3).restart();
@@ -361,73 +371,3 @@ function dblclick(d) {
   d.fx = null;
   d.fy = null;
 }
-
-var state = {
-  get: function(){
-    var positions = [];
-    rubrowser.definitions.forEach(function(elem){
-      if( elem.fx !== undefined && elem.fy !== undefined) {
-        positions.push({
-          id: elem.id,
-          x: elem.fx,
-          y: elem.fy
-        });
-      }
-    });
-    return positions;
-  },
-
-  set: function(layout){
-    if ( !layout ) { return; }
-    layout.forEach(function(pos) {
-      var definition = node.filter(function(e) { return e.id == pos.id; })
-      definition.classed("fixed", true);
-
-      var datum = definition.data()[0]
-      if( datum ) {
-        datum.fx = pos.x
-        datum.fy = pos.y
-      }
-    });
-  }
-}
-
-node.on('mouseover', function(d) {
-  var relatives = [];
-  link.classed('downlighted', function(l) {
-    if (d === l.source || d === l.target){
-      relatives.push(l.source);
-      relatives.push(l.target);
-      return false;
-    }else{
-      return true;
-    }
-  });
-  node.classed('downlighted', function(n) {
-    return !(n == d || relatives.indexOf(n) > -1);
-  });
-});
-
-node.on('mouseout', function() {
-  link.classed('downlighted', false);
-  node.classed('downlighted', false);
-});
-
-window.rubrowser = {
-  data: data,
-  definitions: definitions,
-  relations: relations,
-  simulation: simulation,
-  groupingForce: groupingForce,
-  node: node,
-  link: link,
-  state: state
-};
-
-rubrowser.state.set(layout);
-
-// const gTemplate = container.append("g").attr("class", "template");
-
-// simulation.force("group").drawTemplate(gTemplate);
-
-simulation.alphaTarget(0.5).restart();

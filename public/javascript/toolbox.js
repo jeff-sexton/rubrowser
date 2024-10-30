@@ -5,13 +5,14 @@ $(document).on('click', '.card-header', function(){
 // --------------------------------
 // Details Panel
 // --------------------------------
-rubrowser.node.on('click', function(d){
+rubrowser.svg_nodes.on('click', (d) => {
   var namespace = d.id;
   var lines = d.lines;
-  var dependents = rubrowser.relations.filter(function(i){ return i.target.id == namespace; });
-  var dependencies = rubrowser.relations.filter(function(i){ return i.source.id == namespace; });
-  var definitions = rubrowser.data.definitions.filter(function(i){ return i.namespace == namespace; });
-  var relations = rubrowser.data.relations.filter(function(i){ return i.resolved_namespace == namespace || i.caller == namespace; });
+  var dependents = rubrowser.links.filter((i) => { return i.target.id == namespace; });
+  var dependencies = rubrowser.links.filter((i) => { return i.source.id == namespace; });
+  // Should these use rubrowser.nodes instead?
+  var definitions = rubrowser.data.definitions.filter((i) => { return i.namespace == namespace; });
+  var relations = rubrowser.data.relations.filter((i) => { return i.resolved_namespace == namespace || i.caller == namespace; });
 
   var content = $('<div>');
   content.append('<label><strong>'+namespace+' ('+d.lines+' Lines)</strong></label>');
@@ -49,35 +50,35 @@ rubrowser.node.on('click', function(d){
 // --------------------------------
 // Search Panel
 // --------------------------------
-$(document).on('change', '#highlight_by_namespace', function(){
+$(document).on('change', '#highlight_by_namespace', () => {
   var highlights_entries = $(this).val().trim();
   var highlights = _(highlights_entries.split("\n"));
 
-  rubrowser.node.classed('highlighted_by_namespace', function(d){
+  rubrowser.svg_nodes.classed('highlighted_by_namespace', function(d){
     if(highlights_entries.length == 0){ return false; }
-    return highlights.some(function(i){ return d.id.indexOf(i) > -1; });
+    return highlights.some((i) => { return d.id.indexOf(i) > -1; });
   });
 });
 
-$(document).on('change', '#highlight_by_file_path', function(){
+$(document).on('change', '#highlight_by_file_path', () => {
   var highlights_entries = $(this).val().trim();
   var highlights = _(highlights_entries.split("\n"));
 
-  rubrowser.node.classed('highlighted_by_path', function(d){
+  rubrowser.svg_nodes.classed('highlighted_by_path', (d) =>{
     if(highlights_entries.length == 0){ return false; }
-    return highlights.some(function(i){
-      return _(d.files).some(function(f) {
+    return highlights.some((i) => {
+      return _(d.files).some((f) => {
         return f.indexOf(i) > -1;
       });
     });
   });
 });
 
-$(document).on('change', '#highlight_modules, #highlight_classes', function(){
+$(document).on('change', '#highlight_modules, #highlight_classes', () => {
   var modules_highlighted = $('#highlight_modules').is(':checked'),
       classes_highlighted = $('#highlight_classes').is(':checked');
 
-  rubrowser.node.classed('highlighted_by_type', function(d){
+  rubrowser.svg_nodes.classed('highlighted_by_type', (d) => {
     return (d.type == 'Module' && modules_highlighted) || (d.type == 'Class' && classes_highlighted);
   });
 });
@@ -88,9 +89,9 @@ $(document).on('change', '#highlight_modules, #highlight_classes', function(){
 var ignoring_functions = {};
 
 function updateNodes() {
-
+console.log(ignoring_functions)
   function ignoreNode(d) {
-    return _(ignoring_functions).some(function(ignoring_function) {
+    return _(ignoring_functions).some((ignoring_function) => {
       return ignoring_function(d);
     });
   }
@@ -106,48 +107,59 @@ function updateNodes() {
     return !ignoreRelation(r);
   }
 
-  var filtered_definitions = rubrowser.definitions.filter(notIgnoreNode);
-  rubrowser.simulation.nodes(filtered_definitions);
-  rubrowser.node.classed('ignored', ignoreNode);
+  var filtered_nodes = rubrowser.nodes.filter(notIgnoreNode);
+  rubrowser.simulation.nodes(filtered_nodes);
+  rubrowser.svg_nodes.classed('ignored', ignoreNode);
 
-  var filtered_relations = rubrowser.relations.filter(notIgnoreRelation);
-  rubrowser.simulation.force("link").links(filtered_relations);
-  rubrowser.link.classed('ignored', ignoreRelation);
+  var filtered_links = rubrowser.links.filter(notIgnoreRelation);
+  rubrowser.simulation.force("link").links(filtered_links);
+  rubrowser.svg_links.classed('ignored', ignoreRelation);
 }
 
-$(document).on('change', '#ignore_by_namespace', function(){
+$(document).on('change', '#ignore_by_namespace', function () {
+  console.log("ignore_by_namespace")
+  console.log($(this))
   var ignores_entries = $(this).val().trim();
-  var ignores = ignores_entries.split("\n");
+  console.log(ignores_entries)
+  const ignore_names = ignores_entries.split("\n");
 
   if(ignores_entries.length == 0){
     delete ignoring_functions["ignore_by_name"];
   }else{
-    ignoring_functions["ignore_by_name"] = function(d){
-      return ignores.some(function(i){ return d.id.indexOf(i) > -1; });
-    }
+    ignoring_functions["ignore_by_name"] = ignoreByName(ignore_names);
   }
 
   updateNodes();
 });
+function ignoreByName (ignore_names) {
+  return (d) => {
+    return ignore_names.some((i) => { return d.id.indexOf(i) > -1; });
+  }
+}
 
-$(document).on('change', '#ignore_by_file_path', function(){
+$(document).on('change', '#ignore_by_file_path', function () {
   var ignores_entries = $(this).val().trim();
-  var ignores = ignores_entries.split("\n");
+  var ignorePaths = ignores_entries.split("\n");
 
   if(ignores_entries.length == 0){
     delete ignoring_functions["ignore_by_file_path"];
   }else{
-    ignoring_functions["ignore_by_file_path"] = function(d){
-      return ignores.some(function(i){
-        return _(d.files).every(function(f){
-          return f.indexOf(i) > -1;
-        });
-      });
-    }
+    ignoring_functions["ignore_by_file_path"] = ignoreByFilePath(ignorePaths);
   }
 
   updateNodes();
 });
+
+function ignoreByFilePath (ignorePaths) {
+  return (d) => {
+    return ignorePaths.some((i) => {
+      return _(d.files).every((f) =>{
+        return f.indexOf(i) > -1;
+      });
+    });
+  };  
+};
+
 
 $(document).on('change', '#ignore_modules, #ignore_classes', function(){
   var modules_ignored = $('#ignore_modules').is(':checked'),
@@ -175,6 +187,58 @@ $(document).on('change', '#ignore_modules, #ignore_classes', function(){
 // --------------------------------
 // Display Panel
 // --------------------------------
+
+
+$(document).on('change', "#hide_relations", function(){
+  var hide_relations = $('#hide_relations').is(':checked');
+  rubrowser.svg_links.classed("hide_relation", hide_relations);
+});
+
+$(document).on('change', "#hide_namespaces", function(){
+  var hide_namespaces = $('#hide_namespaces').is(':checked');
+  rubrowser.svg_nodes.classed("hide_namespace", hide_namespaces);
+});
+
+$(document).on('click', "#pause_simulation", function(){
+    rubrowser.simulation.stop();
+});
+
+$(document).on('click', "#start_simulation", function(){
+  rubrowser.simulation.alphaTarget(0.5).restart();
+});
+
+$(document).on('click', "#fix_all", function(){
+  rubrowser.svg_nodes.classed("fixed", true);
+  rubrowser.svg_nodes.each(function(d){
+    d.fx = d.x;
+    d.fy = d.y;
+  });
+});
+
+$(document).on('click', "#release_all", function(){
+  rubrowser.svg_nodes.classed("fixed", false);
+  rubrowser.svg_nodes.each(function(d){
+    delete d["fx"];
+    delete d["fy"];
+  });
+});
+
+$(document).on('click', "#download_layout", function(){
+  var json = JSON.stringify(rubrowser.state.get());
+  var element = document.createElement('a');
+  element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(json));
+  element.setAttribute('download', 'layout.json');
+
+  element.style.display = 'none';
+  document.body.appendChild(element);
+  element.click();
+  document.body.removeChild(element);
+});
+
+// --------------------------------
+// Simulation Controls 
+// --------------------------------
+
 $(document).on('change', "#force_strength", function(){
   var new_value = $(this).val();
   $('#force_strength_value').text(new_value);
@@ -221,47 +285,4 @@ $(document).on('change', "#force_charge", function(){
   var new_value = $(this).val();
   $('#force_charge_value').text(new_value);
   rubrowser.groupingForce.forceCharge(-new_value);
-});
-
-
-$(document).on('change', "#hide_relations", function(){
-  var hide_relations = $('#hide_relations').is(':checked');
-  rubrowser.link.classed("hide_relation", hide_relations);
-});
-
-$(document).on('change', "#hide_namespaces", function(){
-  var hide_namespaces = $('#hide_namespaces').is(':checked');
-  rubrowser.node.classed("hide_namespace", hide_namespaces);
-});
-
-$(document).on('click', "#pause_simulation", function(){
-    rubrowser.simulation.stop();
-});
-
-$(document).on('click', "#fix_all", function(){
-  rubrowser.node.classed("fixed", true);
-  rubrowser.node.each(function(d){
-    d.fx = d.x;
-    d.fy = d.y;
-  });
-});
-
-$(document).on('click', "#release_all", function(){
-  rubrowser.node.classed("fixed", false);
-  rubrowser.node.each(function(d){
-    delete d["fx"];
-    delete d["fy"];
-  });
-});
-
-$(document).on('click', "#download_layout", function(){
-  var json = JSON.stringify(rubrowser.state.get());
-  var element = document.createElement('a');
-  element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(json));
-  element.setAttribute('download', 'layout.json');
-
-  element.style.display = 'none';
-  document.body.appendChild(element);
-  element.click();
-  document.body.removeChild(element);
 });
