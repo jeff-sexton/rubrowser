@@ -89,7 +89,6 @@ $(document).on('change', '#highlight_modules, #highlight_classes', () => {
 var ignoring_functions = {};
 
 function updateNodes() {
-console.log(ignoring_functions)
   function ignoreNode(d) {
     return _(ignoring_functions).some((ignoring_function) => {
       return ignoring_function(d);
@@ -117,10 +116,7 @@ console.log(ignoring_functions)
 }
 
 $(document).on('change', '#ignore_by_namespace', function () {
-  console.log("ignore_by_namespace")
-  console.log($(this))
-  var ignores_entries = $(this).val().trim();
-  console.log(ignores_entries)
+  const ignores_entries = $(this).val().trim();
   const ignore_names = ignores_entries.split("\n");
 
   if(ignores_entries.length == 0){
@@ -188,17 +184,6 @@ $(document).on('change', '#ignore_modules, #ignore_classes', function(){
 // Display Panel
 // --------------------------------
 
-
-$(document).on('change', "#hide_relations", function(){
-  var hide_relations = $('#hide_relations').is(':checked');
-  rubrowser.svg_links.classed("hide_relation", hide_relations);
-});
-
-$(document).on('change', "#hide_namespaces", function(){
-  var hide_namespaces = $('#hide_namespaces').is(':checked');
-  rubrowser.svg_nodes.classed("hide_namespace", hide_namespaces);
-});
-
 $(document).on('click', "#pause_simulation", function(){
     rubrowser.simulation.stop();
 });
@@ -235,9 +220,30 @@ $(document).on('click', "#download_layout", function(){
   document.body.removeChild(element);
 });
 
+$(document).on('change', "#hide_relations", function(){
+  var hide_relations = $('#hide_relations').is(':checked');
+  rubrowser.svg_links.classed("hide_relation", hide_relations);
+});
+
+$(document).on('change', "#hide_namespaces", function(){
+  var hide_namespaces = $('#hide_namespaces').is(':checked');
+  rubrowser.svg_nodes.classed("hide_namespace", hide_namespaces);
+});
+
 // --------------------------------
 // Simulation Controls 
 // --------------------------------
+
+$(document).on('change', "#enable_grouping", function(){
+  var enable_grouping = $('#enable_grouping').is(':checked');
+  rubrowser.groupingForce.enableGrouping(enable_grouping);
+  $(".group_config").prop('disabled', !enable_grouping);
+});
+
+$(document).on('change', "#group-template-select", () => {
+  const template_selected = $('#group-template-select').val()
+  rubrowser.groupingForce.template(template_selected);
+});
 
 $(document).on('change', "#force_strength", function(){
   var new_value = $(this).val();
