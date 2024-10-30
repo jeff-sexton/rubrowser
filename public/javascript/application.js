@@ -1,43 +1,64 @@
 var classForCircular = function(d) {
   return d.circular ? 'circular' : '';
 };
+// const color = d3.scaleOrdinal(d3.schemeCategory10);
 
-var svg = d3.select(".dependency_graph svg"),
-    $svg = $('.dependency_graph svg'),
-    width = $svg.width(),
-    height = $svg.height(),
-    // drag = d3.drag()
-    // .on("start", dragstarted)
-    // .on("drag", dragged)
-    // .on("end", dragended),
-    dup_definitions = data.definitions.map(function(d){
-      return {
-        id: d.namespace,
-        file: d.file,
-        type: d.type,
-        lines: d.lines,
-        line: d.line,
-        circular: d.circular
-      };
-    }),
-    definitions = _(dup_definitions).groupBy('id').map(function(group) {
-      const files = group.map(function(d){ return d.file; })
-      const directory = files[0].split("/").slice(0, -1).join("/");
-      return {
-        id: group[0].id,
-        name: group[0].id,
-        type: group[0].type,
-        lines: _(group).sumBy('lines'),
-        line: group[0].line, // Is this the correct definition line?
-        circular: group[0].circular,
-        files: files,
-        directory: directory,
-      };
-    }).value(),
-    namespaces = definitions.map(function(d){ return d.id; }),
-    relations = data.relations.map(function(d){ return {source: d.caller, target: d.resolved_namespace, circular: d.circular}; }),
-    max_lines = _.maxBy(definitions, 'lines').lines,
-    max_circle_r = 100;
+var svg = d3.select(".dependency_graph svg");
+
+var $svg = $('.dependency_graph svg');
+
+var width = $svg.width();
+
+var height = $svg.height();
+
+console.log("width", width);
+console.log("height", height);
+
+// var width = 1440,
+//     height = 1440;
+
+// var svg = d3.select(".dependency_graph svg")
+//     .attr("width", width)
+//     .attr("height", height);
+
+var drag = d3.drag()
+  .on("start", dragstarted)
+  .on("drag", dragged)
+  .on("end", dragended);
+
+var dup_definitions = data.definitions.map(function(d){
+  return {
+    id: d.namespace,
+    file: d.file,
+    type: d.type,
+    lines: d.lines,
+    line: d.line,
+    circular: d.circular
+  };
+});
+
+var definitions = _(dup_definitions).groupBy('id').map(function(group) {
+  const files = group.map(function(d){ return d.file; })
+  const directory = files[0].split("/").slice(0, -1).join("/");
+  return {
+    id: group[0].id,
+    name: group[0].id,
+    type: group[0].type,
+    lines: _(group).sumBy('lines'),
+    line: group[0].line, // Is this the correct definition line?
+    circular: group[0].circular,
+    files: files,
+    directory: directory,
+  };
+}).value();
+
+var namespaces = definitions.map(function(d){ return d.id; });
+
+var relations = data.relations.map(function(d){ return {source: d.caller, target: d.resolved_namespace, circular: d.circular}; });
+
+var max_lines = _.maxBy(definitions, 'lines').lines;
+
+var max_circle_r = 20;
 
 /* 
   Relation Format:
@@ -68,14 +89,14 @@ const formatted_lines = data.relations.map((relation) => {
     circular: relation.circular,
   }
 }).filter((relation) => {
-  return namespaces.indexOf(relation.source.id) >= 0 && namespaces.indexOf(relation.target.id) >= 0;
+  return namespaces.indexOf(relation.sourceName) >= 0 && namespaces.indexOf(relation.targetName) >= 0;
 })
 
 const lines = _.uniqWith(formatted_lines, _.isEqual);
 
-lines.forEach((line) => {
-  console.log("line", line);
-});
+// lines.forEach((line) => {
+//   console.log("line", line);
+// });
 
 
 // definitions.forEach((definition) => {
@@ -91,13 +112,17 @@ relations = _.uniqWith(relations, _.isEqual);
 //   console.log("relation", relation);
 // });
 
-// var zoom = d3.zoom()
-//     .on("zoom", function () {
-//       container.attr("transform", d3.event.transform);
-//     });
+const container = svg.append('g')
 
-// svg.call(zoom)
-//   .on("dblclick.zoom", null);
+let currentScale = 1;
+var zoom = d3.zoom()
+    .on("zoom", function () {
+      currentScale = d3.event.transform.k;
+      container.attr("transform", d3.event.transform);
+    });
+
+svg.call(zoom)
+  .on("dblclick.zoom", null);
 
 // function parsePath(path) {
 //   return path.split("/")
@@ -132,7 +157,7 @@ relations = _.uniqWith(relations, _.isEqual);
 //   return distance;
 // };
 
-const container = svg.append('g');
+
 
 // const simulation = d3.forceSimulation()
 //   .force("link", d3.forceLink().id(function(d) { return d.id; }).strength(calcStrength).distance(calcDistance))
@@ -148,25 +173,53 @@ const container = svg.append('g');
 // simulation.force("link")
 //   .links(relations);
 
-const simulation = d3.forceSimulation()
-  .force("charge", d3.forceManyBody())
-  .force("x", d3.forceX(width / 2).strength(0.05))
-  .force("y", d3.forceY(height / 2).strength(0.05));
-
 // Instantiate the forceInABox force
 const groupingForce = forceInABox()
-  .strength(0.1) // Strength to foci
+  .size([width, height]) // Size of the chart
   .template("force") // Either treemap or force
   .groupBy("directory") // Node attribute to group
+  // .strength(forceInABoxStrength) // Strength to foci
+  .strength(0.1) // Strength to foci
   .links(lines) // The graph links. Must be called after setting the grouping attribute
-  .size([width, height]); // Size of the chart
+  .enableGrouping(true)
+  // .linkStrengthInterCluster(linkStrengthInterCluster) // linkStrength between nodes of different clusters
+  .linkStrengthInterCluster(0.001) // linkStrength between nodes of different clusters
+  // .linkStrengthIntraCluster(linkStrengthIntraCluster) // linkStrength between nodes of the same cluster
+  .linkStrengthIntraCluster(0.001) // linkStrength between nodes of the same cluster
+  // .forceLinkDistance(forceLinkDistance) // linkDistance between meta-nodes on the template (Force template only)
+  .forceLinkDistance(200) // linkDistance between meta-nodes on the template (Force template only)
+  // .forceLinkStrength(forceLinkStrength) // linkStrength between meta-nodes of the template (Force template only)
+  .forceLinkStrength(0.1) // linkStrength between meta-nodes of the template (Force template only)
+  // .forceCharge(-forceCharge) // Charge between the meta-nodes (Force template only)
+  .forceCharge(-1000) // Charge between the meta-nodes (Force template only)
+  // .forceNodeSize(forceNodeSize) // Used to compute the template force nodes size (Force template only)
+  // .forceNodeSize(10) // Used to compute the template force nodes size (Force template only)
 
-// Add your forceInABox to the simulation
-simulation
+const simulation = d3.forceSimulation()
   .nodes(definitions)
   .force("group", groupingForce)
-  .force("link", d3.forceLink(lines).distance(50).strength(groupingForce.getLinkStrength)) // default link force will try to join nodes in the same group stronger than if they are in different groups
-  // .on("tick", ticked);
+  .force("charge", d3.forceManyBody().strength(-1000))
+  .force("link", d3.forceLink(lines).distance(2).strength(groupingForce.getLinkStrength))
+  .force("center", d3.forceCenter(width / 2, height / 2))
+  .force("x", d3.forceX(width / 2))
+  .force("y", d3.forceY(height / 2))
+  .force("forceCollide", d3.forceCollide(80))
+
+simulation.on("tick", function() {
+  link.attr("x1", function(d) { return d.source.x; })
+      .attr("y1", function(d) { return d.source.y; })
+      .attr("x2", function(d) { return d.target.x; })
+      .attr("y2", function(d) { return d.target.y; })
+      .attr("style", `stroke-width: ${1.5 / currentScale}px`);
+
+  node.attr("cx", function(d) { return d.x; })
+      .attr("cy", function(d) { return d.y; })
+      .attr("transform", transform);
+});
+
+function transform(d) {
+  return "translate(" + d.x + "," + d.y + ")";
+}
 
 function addStyle (d) {
   // console.log("d", d);
@@ -180,31 +233,91 @@ function addStyle (d) {
   return `font-size: ${size}px`;
 };
 
+// var link = svg.selectAll(".link")
+//     .data(lines)
+//   .enter().append("line")
+//     .attr("class", "link")
+//     .style("stroke-width", function(d) { return Math.sqrt(d.value); });
+
+// var link = container.append("g")
+//     .attr("class", "links")
+//     .selectAll("path")
+//     .data(relations)
+//     .enter().append("path")
+//     .attr("class", function(d) { return 'link ' + classForCircular(d); })
+//     .attr("marker-end", function(d){ return "url(#" + d.target.id + ")"; })
+
 var link = container.append("g")
     .attr("class", "links")
-    .selectAll("path")
-    .data(relations)
-    .enter().append("path")
+    .selectAll(".link")
+    .data(lines)
+    .enter().append("line")
     .attr("class", function(d) { return 'link ' + classForCircular(d); })
-    .attr("marker-end", function(d){ return "url(#" + d.target.id + ")"; }),
-    node = container.append("g")
+    // .attr("marker-end", function(d){ return "url(#" + d.target.id + ")"; });
+
+// var node = svg.selectAll(".node")
+//     .data(definitions)
+//   .enter().append("circle")
+//     .attr("class", "node")
+//     .attr("r", 5)
+//     .style("fill", function(d) { return color(d.group); })
+//     .call(d3.drag()
+//               .on("start", dragstarted)
+//               .on("drag", dragged)
+//               .on("end", dragended));
+
+// node.append("title")
+//     .text(function(d) { return d.id; });
+
+
+
+// node = container.append("g")
+// .attr("class", "nodes")
+// .selectAll("g")
+// .data(definitions)
+// .enter().append("g")
+// // .call(drag)
+// // .on("dblclick", dblclick),
+// circle = node
+// .append("circle")
+// .attr("r", function(d) { return d.lines / max_lines * max_circle_r + 6; })
+// .attr("class", function (d) { return classForCircular(d) ; }),
+// type = node
+// .append("text")
+// .attr("class", "type")
+// .attr("x", "-0.4em")
+// .attr("y", "0.4em")
+// .text(function(d) { return d.type[0]; }),
+// text = node
+// .append("text")
+// .attr("class", "namespace")
+// .attr("style", addStyle) 
+// .attr("x", function(d) { return d.lines / max_lines * max_circle_r + 8; })
+// .attr("y", ".31em")
+// .text(function(d) { return d.id; });
+
+var node = container.append("g")
     .attr("class", "nodes")
-    .selectAll("g")
+    .selectAll(".node")
     .data(definitions)
     .enter().append("g")
-    // .call(drag)
-    // .on("dblclick", dblclick),
-    circle = node
+    .attr("class", "node")
+    .call(drag)
+    .on("dblclick", dblclick);
+
+var circle = node
     .append("circle")
     .attr("r", function(d) { return d.lines / max_lines * max_circle_r + 6; })
-    .attr("class", function (d) { return classForCircular(d) ; }),
-    type = node
+    .attr("class", function (d) { return `node-circle ${classForCircular(d)}` ; });
+
+var type = node
     .append("text")
     .attr("class", "type")
     .attr("x", "-0.4em")
     .attr("y", "0.4em")
-    .text(function(d) { return d.type[0]; }),
-    text = node
+    .text(function(d) { return d.type[0]; });
+
+var text = node
     .append("text")
     .attr("class", "namespace")
     .attr("style", addStyle) 
@@ -225,17 +338,7 @@ container.append("defs").selectAll("marker")
   .append("path")
   .attr("d", "M0,-5L10,0L0,5");
 
-function ticked() {
-  link.attr("d", linkArc);
-  node.attr("transform", transform);
-}
 
-function linkArc(d) {
-  var dx = d.target.x - d.source.x,
-      dy = d.target.y - d.source.y,
-      dr =  0;
-  return "M" + d.source.x + "," + d.source.y + "A" + dr + "," + dr + " 0 0,1 " + d.target.x + "," + d.target.y;
-}
 
 function dragstarted(d) {
   if (!d3.event.active) simulation.alphaTarget(0.3).restart();
@@ -257,10 +360,6 @@ function dblclick(d) {
   d3.select(this).classed("fixed", false);
   d.fx = null;
   d.fy = null;
-}
-
-function transform(d) {
-  return "translate(" + d.x + "," + d.y + ")";
 }
 
 var state = {
@@ -319,9 +418,16 @@ window.rubrowser = {
   definitions: definitions,
   relations: relations,
   simulation: simulation,
+  groupingForce: groupingForce,
   node: node,
   link: link,
   state: state
 };
 
-// rubrowser.state.set(layout);
+rubrowser.state.set(layout);
+
+// const gTemplate = container.append("g").attr("class", "template");
+
+// simulation.force("group").drawTemplate(gTemplate);
+
+simulation.alphaTarget(0.5).restart();

@@ -50,8 +50,31 @@
       <button type="button" id="release_all" class="btn btn-secondary btn-block">Release all</button>
     </div>
     <div class="card-body">
-      <label class="form-label">Force Collide</label>
+
+      <label class="form-label">Base Force Strength: <output id="force_strength_value">1000</output></label>
+      <input id="force_strength" class="form-control" type="range" value="1000" min="0" max="20000" step="1"/>
+
+      <label class="form-label">Force Collide: <output id="force_collide_value">80</output></label>
       <input id="force_collide" class="form-control" type="range" value="80" min="0" max="500"/>
+      
+      <label class="form-label">Grouping Strength: <output id="force_in_a_box_strength_value">0.1</output></label>
+      <input id="force_in_a_box_strength" class="form-control" type="range" value="0.1" min="0" max="1" step="0.01"/>
+
+      <label class="form-label">linkStrengthIntraCluster: <output id="link_strength_intra_cluster_value">0.001</output></label>
+      <input id="link_strength_intra_cluster" class="form-control" type="range" value="0.001" min="0" max="1" step="0.001"/>
+
+      <label class="form-label">linkStrengthInterCluster: <output id="link_strength_inter_cluster_value">0.001</output></label>
+      <input id="link_strength_inter_cluster" class="form-control" type="range" value="0.001" min="0" max="1" step="0.001"/>
+
+      <label class="form-label">forceLinkDistance: <output id="force_link_distance_value">200</output></label>
+      <input id="force_link_distance" class="form-control" type="range" value="200" min="0" max="1000" step="1"/>
+
+      <label class="form-label">forceLinkStrength: <output id="force_link_strength_value">0.1</output></label>
+      <input id="force_link_strength" class="form-control" type="range" value="0.1" min="0" max="1" step="0.001"/>
+
+      <label class="form-label">forceCharge: <output id="force_charge_value">1000</output></label>
+      <input id="force_charge" class="form-control" type="range" value="1000" min="0" max="20000" step="1"/>
+      
       <div class="form-check">
         <input type="checkbox" class="form-check-input" id="hide_namespaces"/>
         <label class="form-check-label">Hide namespaces</label>

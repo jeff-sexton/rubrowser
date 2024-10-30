@@ -15,6 +15,9 @@ module Rubrowser
     def parse
       parsers.each(&:parse)
 
+      # require 'byebug'
+      # byebug
+
       @definitions ||= parsers.map(&:definitions).reduce(:+).sort { |a, b| b <=> a }.to_a
       @relations ||= parsers.map(&:relations).reduce(:+).to_a
 
