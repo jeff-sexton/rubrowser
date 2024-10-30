@@ -61,14 +61,20 @@
     <div class="card-body">
       <div class="card-header">Simulation Controls</div>
 
-      <p> Base Simulation Controls </p>
       <label class="form-label">Base Force Strength: <output id="force_strength_value">1000</output></label>
       <input id="force_strength" class="form-control" type="range" value="1000" min="0" max="20000" step="1"/>
 
+      <label class="form-label">Base Link Strength: <output id="link_strength_value">0.1</output></label>
+      <input id="link_strength" class="form-control" type="range" value="0.1" min="0" max="1" step="0.01"/>
+
+      <label class="form-label">Base Link Distance: <output id="link_distance_value">2</output></label>
+      <input id="link_distance" class="form-control" type="range" value="2" min="0" max="150" step="1"/>
+
       <label class="form-label">Force Collide: <output id="force_collide_value">80</output></label>
       <input id="force_collide" class="form-control" type="range" value="80" min="0" max="500"/>
-      
-      <p> Grouping Simulation Controls </p>
+    </div>
+    <div class="card-body">
+      <div class="card-header">Group Simulation Controls</div>
 
       <div class="form-check">
         <input type="checkbox" class="form-check-input" id="enable_grouping" checked />

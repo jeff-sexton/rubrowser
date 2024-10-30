@@ -9,10 +9,11 @@ module Rubrowser
     class File
       FILE_SIZE_LIMIT = 2 * 1024 * 1024
 
-      attr_reader :file, :definitions, :relations
+      attr_reader :file, :relative_path, :definitions, :relations
 
       def initialize(file)
         @file = ::File.absolute_path(file)
+        @relative_path = file
         @definitions = []
         @relations = []
       end
@@ -77,6 +78,7 @@ module Rubrowser
         klass.new(
           namespace,
           file: file,
+          relative_path: relative_path,
           line: node.loc.line,
           lines: node.loc.last_line - node.loc.line + 1
         )
@@ -97,6 +99,7 @@ module Rubrowser
           constant,
           parents,
           file: file,
+          relative_path: relative_path,
           line: node.loc.line
         )
         { relations: [definition] }

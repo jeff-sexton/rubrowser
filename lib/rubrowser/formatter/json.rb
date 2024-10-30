@@ -26,6 +26,7 @@ module Rubrowser
           namespace: definition.to_s,
           circular: definition.circular?,
           file: definition.file,
+          relative_path: definition.relative_path,
           line: definition.line,
           lines: definition.lines
         }
@@ -38,6 +39,7 @@ module Rubrowser
           resolved_namespace: relation.resolve(definitions).to_s,
           caller: relation.caller_namespace.to_s,
           file: relation.file,
+          relative_path: relation.relative_path,
           circular: relation.circular?,
           line: relation.line
         }

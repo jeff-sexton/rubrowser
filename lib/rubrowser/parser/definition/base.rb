@@ -2,11 +2,12 @@ module Rubrowser
   module Parser
     module Definition
       class Base
-        attr_reader :namespace, :file, :line, :lines
+        attr_reader :namespace, :file, :relative_path, :line, :lines
 
-        def initialize(namespace, file: nil, line: nil, lines: 0)
+        def initialize(namespace, file: nil, relative_path: nil, line: nil, lines: 0)
           @namespace = Array(namespace).compact
           @file = file
+          @relative_path = relative_path
           @line = line
           @lines = lines
           @circular = false
