@@ -4,12 +4,13 @@ module Rubrowser
   module Parser
     module Relation
       class Base
-        attr_reader :file, :line
+        attr_reader :file, :relative_path, :line
 
-        def initialize(namespace, caller_namespace, file: nil, line: nil)
+        def initialize(namespace, caller_namespace, file: nil, relative_path: nil, line: nil)
           @namespace = namespace
           @caller_namespace = caller_namespace
           @file = file
+          @relative_path = relative_path
           @line = line
           @is_circular = false
         end

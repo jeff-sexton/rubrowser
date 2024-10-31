@@ -46,12 +46,9 @@
     <div class="card-body">
       <button type="button" id="download_layout" class="btn btn-secondary btn-block">Download layout</button>
       <button type="button" id="pause_simulation" class="btn btn-secondary btn-block">Pause animation</button>
+      <button type="button" id="start_simulation" class="btn btn-secondary btn-block">Start animation</button>
       <button type="button" id="fix_all" class="btn btn-secondary btn-block">Fix all</button>
       <button type="button" id="release_all" class="btn btn-secondary btn-block">Release all</button>
-    </div>
-    <div class="card-body">
-      <label class="form-label">Force Collide</label>
-      <input id="force_collide" class="form-control" type="range" value="80" min="0" max="500"/>
       <div class="form-check">
         <input type="checkbox" class="form-check-input" id="hide_namespaces"/>
         <label class="form-check-label">Hide namespaces</label>
@@ -60,6 +57,53 @@
         <input type="checkbox" class="form-check-input" id="hide_relations"/>
         <label class="form-check-label">Hide relations</label>
       </div>
+    </div>
+    <div class="card-body">
+      <div class="card-header">Simulation Controls</div>
+
+      <label class="form-label">Base Force Strength: <output id="force_strength_value">1000</output></label>
+      <input id="force_strength" class="form-control" type="range" value="1000" min="0" max="20000" step="1"/>
+
+      <label class="form-label">Base Link Strength: <output id="link_strength_value">0.1</output></label>
+      <input id="link_strength" class="form-control" type="range" value="0.1" min="0" max="1" step="0.01"/>
+
+      <label class="form-label">Base Link Distance: <output id="link_distance_value">2</output></label>
+      <input id="link_distance" class="form-control" type="range" value="2" min="0" max="150" step="1"/>
+
+      <label class="form-label">Force Collide: <output id="force_collide_value">80</output></label>
+      <input id="force_collide" class="form-control" type="range" value="80" min="0" max="500"/>
+    </div>
+    <div class="card-body">
+      <div class="card-header">Group Simulation Controls</div>
+
+      <div class="form-check">
+        <input type="checkbox" class="form-check-input" id="enable_grouping" checked />
+        <label class="form-check-label">Enable Grouping</label>
+      </div>
+
+      <label for="group-template-select">Grouping Template:</label>
+      <select name="group-template" id="group-template-select" class="form-control group_config">
+        <option selected value="force">Force</option>
+        <option value="treemap">Treemap</option>
+      </select>
+
+      <label class="form-label">Grouping Strength: <output id="force_in_a_box_strength_value">0.1</output></label>
+      <input id="force_in_a_box_strength" class="form-control group_config" type="range" value="0.1" min="0" max="1" step="0.01"/>
+
+      <label class="form-label">linkStrengthIntraCluster: <output id="link_strength_intra_cluster_value">0.001</output></label>
+      <input id="link_strength_intra_cluster" class="form-control group_config" type="range" value="0.001" min="0" max="1" step="0.001"/>
+
+      <label class="form-label">linkStrengthInterCluster: <output id="link_strength_inter_cluster_value">0.001</output></label>
+      <input id="link_strength_inter_cluster" class="form-control group_config" type="range" value="0.001" min="0" max="1" step="0.001"/>
+
+      <label class="form-label">forceLinkDistance: <output id="force_link_distance_value">200</output></label>
+      <input id="force_link_distance" class="form-control group_config" type="range" value="200" min="0" max="1000" step="1"/>
+
+      <label class="form-label">forceLinkStrength: <output id="force_link_strength_value">0.1</output></label>
+      <input id="force_link_strength" class="form-control group_config" type="range" value="0.1" min="0" max="1" step="0.001"/>
+
+      <label class="form-label">forceCharge: <output id="force_charge_value">1000</output></label>
+      <input id="force_charge" class="form-control group_config" type="range" value="1000" min="0" max="20000" step="1"/>
     </div>
   </div>
 </div>

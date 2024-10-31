@@ -13,18 +13,27 @@ html, body, .dependency_graph, .dependency_graph svg{
     stroke-width: 1.5px;
 }
 
-circle {
+circle.node-circle {
     fill: #fff;
     stroke: #333;
     stroke-width: 1.5px;
+}
+
+circle.cell {
+    fill: none;
+    stroke: #333;
+    stroke-width: 1.5px;
+    pointer-events: none;
 }
 
 .circular {
     stroke: #FF0000;
 }
 
-.fixed circle {
+.fixed .node-circle {
     stroke-width: 3px;
+    fill: blue;
+    stroke:yellow;
 }
 
 text {
@@ -45,7 +54,7 @@ text.type{
     display: none;
 }
 
-.running circle{
+.running .node-circle{
     stroke: #18b738;
     fill: #7dea93;
 }
