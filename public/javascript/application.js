@@ -52,10 +52,9 @@ const simulation = d3
     "link",
     d3.forceLink(links).distance(2).strength(groupingForce.getLinkStrength)
   )
-  // .force("center", d3.forceCenter(width / 2, height / 2))
   .force("x", d3.forceX(width / 2))
   .force("y", d3.forceY(height / 2))
-  .force("forceCollide", d3.forceCollide(80).radius((d => d.dependents.length * 2 + 12) / currentScale));
+  .force("forceCollide", d3.forceCollide(80).radius((d => d.dependents.length * 1 + 6) / currentScale));
 
 simulation.on("tick", function () {
   svg_links
@@ -122,7 +121,7 @@ const svg_nodes = container
 
 function calcCircleRadius(d) {
   const dependents = d.dependents.length;
-  let size = Math.min(dependents * 2 + 6, max_circle_r);
+  let size = Math.min(dependents * 1 + 6, max_circle_r);
   if (currentScale > 1) {
     size = size / currentScale;
   }
@@ -138,7 +137,7 @@ const circle = svg_nodes
   });
 
 function addTextStyle(d) {
-  let size = Math.min(d.dependents.length * 2 + 12, 48);
+  let size = Math.min(d.dependents.length * 1 + 12, 48);
 
   if (currentScale > 1) {
     size = size / currentScale;
@@ -176,26 +175,6 @@ const text = svg_nodes
   .text(function (d) {
     return d.id;
   });
-
-container
-  .append("defs")
-  .selectAll("marker")
-  .data(nodes)
-  .enter()
-  .append("marker")
-  .attr("id", function (d) {
-    return d.id;
-  })
-  .attr("viewBox", "0 -5 10 10")
-  .attr("refX", function (d) {
-    return (d.lines / max_lines) * max_circle_r + 20;
-  })
-  .attr("refY", 0)
-  .attr("markerWidth", 6)
-  .attr("markerHeight", 6)
-  .attr("orient", "auto")
-  .append("path")
-  .attr("d", "M0,-5L10,0L0,5");
 
 // Set up Listeners
 

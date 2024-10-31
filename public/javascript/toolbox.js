@@ -41,7 +41,7 @@ rubrowser.svg_nodes.on("click", (d) => {
       const filePath = `${dependent.relative_path.replace(/^\.\//, "")}:${dependent.line}`
       const absolutePath = `${basePath}/${filePath}`;
       dependents_ol.append(
-        `<li><span class="node-link" id=${dependent.sourceName}>${dependent.sourceName}</span> - <a href="vscode://file/${absolutePath}">${filePath}</a></li>`
+        `<li><span class="node-link" id=${dependent.sourceName}>${dependent.source.type} - ${dependent.sourceName}</span> - <a href="vscode://file/${absolutePath}">${filePath}</a></li>`
       );
     });
     content.append(dependents_ol);
@@ -53,7 +53,7 @@ rubrowser.svg_nodes.on("click", (d) => {
     dependencies.forEach((dependency) => {
       const filePath = `${dependency.relative_path.replace(/^\.\//, "")}:${dependency.line}`
       const absolutePath = `${basePath}/${filePath}`;
-      dependencies_ol.append(`<li><span class="node-link" id=${dependency.targetName}>${dependency.targetName}</span> - <a href="vscode://file/${absolutePath}">${filePath}</a></li>`);
+      dependencies_ol.append(`<li><span class="node-link" id=${dependency.targetName}>${dependency.target.type} - ${dependency.targetName}</span> - <a href="vscode://file/${absolutePath}">${filePath}</a></li>`);
     });
     content.append(dependencies_ol);
   }
@@ -290,9 +290,13 @@ $(document).on("change", "#force_collide", function () {
 
 $(document).on("change", "#enable_grouping", function () {
   var enable_grouping = $("#enable_grouping").is(":checked");
+  
   rubrowser.groupingForce.enableGrouping(enable_grouping);
-  $(".group_config").prop('disabled', !enable_grouping);
+  if (enable_grouping) {
+    rubrowser.simulation.force("link").strength(rubrowser.groupingForce.getLinkStrength);
+  }
   $("#link_strength").prop('disabled', enable_grouping);
+  $(".group_config").prop('disabled', !enable_grouping);
 });
 
 $(document).on("change", "#group-template-select", () => {
