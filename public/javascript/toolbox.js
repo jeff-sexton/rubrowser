@@ -21,7 +21,7 @@ rubrowser.svg_nodes.on("click", (d) => {
 
   let content = $("<div>");
   content.append(
-    `<label><strong>${namespace} (${lines} Lines)</strong></label>`
+    `<label><strong><span class="node-link" id=${namespace}>${namespace}</span> (${lines} Lines)</strong></label>`
   );
 
   content.append("<strong>Defined in:</strong>");
@@ -41,7 +41,7 @@ rubrowser.svg_nodes.on("click", (d) => {
       const filePath = `${dependent.relative_path.replace(/^\.\//, "")}:${dependent.line}`
       const absolutePath = `${basePath}/${filePath}`;
       dependents_ol.append(
-        `<li>${dependent.sourceName} - <a href="vscode://file/${absolutePath}">${filePath}</a></li>`
+        `<li><span class="node-link" id=${dependent.sourceName}>${dependent.sourceName}</span> - <a href="vscode://file/${absolutePath}">${filePath}</a></li>`
       );
     });
     content.append(dependents_ol);
@@ -53,7 +53,7 @@ rubrowser.svg_nodes.on("click", (d) => {
     dependencies.forEach((dependency) => {
       const filePath = `${dependency.relative_path.replace(/^\.\//, "")}:${dependency.line}`
       const absolutePath = `${basePath}/${filePath}`;
-      dependencies_ol.append(`<li>${dependency.targetName} - <a href="vscode://file/${absolutePath}">${filePath}</a></li>`);
+      dependencies_ol.append(`<li><span class="node-link" id=${dependency.targetName}>${dependency.targetName}</span> - <a href="vscode://file/${absolutePath}">${filePath}</a></li>`);
     });
     content.append(dependencies_ol);
   }
@@ -65,7 +65,7 @@ rubrowser.svg_nodes.on("click", (d) => {
 // --------------------------------
 // Search Panel
 // --------------------------------
-$(document).on("change", "#highlight_by_namespace", () => {
+$(document).on("change", "#highlight_by_namespace", function () {
   var highlights_entries = $(this).val().trim();
   var highlights = _(highlights_entries.split("\n"));
 
@@ -79,7 +79,7 @@ $(document).on("change", "#highlight_by_namespace", () => {
   });
 });
 
-$(document).on("change", "#highlight_by_file_path", () => {
+$(document).on("change", "#highlight_by_file_path", function () {
   var highlights_entries = $(this).val().trim();
   var highlights = _(highlights_entries.split("\n"));
 
@@ -240,7 +240,7 @@ $(document).on("click", "#download_layout", function () {
     "href",
     "data:text/plain;charset=utf-8," + encodeURIComponent(json)
   );
-  element.setAttribute("download", "layout.json");
+  element.setAttribute("download", "config.json");
 
   element.style.display = "none";
   document.body.appendChild(element);
@@ -291,8 +291,8 @@ $(document).on("change", "#force_collide", function () {
 $(document).on("change", "#enable_grouping", function () {
   var enable_grouping = $("#enable_grouping").is(":checked");
   rubrowser.groupingForce.enableGrouping(enable_grouping);
-  // $(".group_config").prop('disabled', !enable_grouping);
-  // $("#link_strength").prop('disabled', enable_grouping);
+  $(".group_config").prop('disabled', !enable_grouping);
+  $("#link_strength").prop('disabled', enable_grouping);
 });
 
 $(document).on("change", "#group-template-select", () => {
@@ -334,4 +334,24 @@ $(document).on("change", "#force_charge", function () {
   var new_value = $(this).val();
   $("#force_charge_value").text(new_value);
   rubrowser.groupingForce.forceCharge(-new_value);
+});
+
+$(document).on("click", ".node-link", function () {
+  const nodeID = $(this).attr('id');
+  const node = nodes.find((d) => {
+    return d.id == nodeID;
+  });
+
+  rubrowser.zoom.translateTo(d3.select(".dependency_graph svg"), node.x, node.y)
+});
+
+$(document).keyup(function(e){
+  if(e.keyCode == 32){
+      // user has pressed space
+      if (rubrowser.simulation.alpha() > 0.1) {
+        rubrowser.simulation.alpha(0).stop();
+      } else {
+        rubrowser.simulation.alphaTarget(0.3).restart()
+      }
+  }
 });

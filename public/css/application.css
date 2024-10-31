@@ -32,6 +32,8 @@ circle.cell {
 
 .fixed .node-circle {
     stroke-width: 3px;
+    fill: blue;
+    stroke:yellow;
 }
 
 text {

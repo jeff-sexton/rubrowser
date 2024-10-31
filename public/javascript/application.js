@@ -52,10 +52,10 @@ const simulation = d3
     "link",
     d3.forceLink(links).distance(2).strength(groupingForce.getLinkStrength)
   )
-  .force("center", d3.forceCenter(width / 2, height / 2))
+  // .force("center", d3.forceCenter(width / 2, height / 2))
   .force("x", d3.forceX(width / 2))
   .force("y", d3.forceY(height / 2))
-  .force("forceCollide", d3.forceCollide(80));
+  .force("forceCollide", d3.forceCollide(80).radius((d => d.dependents.length * 2 + 12) / currentScale));
 
 simulation.on("tick", function () {
   svg_links
@@ -116,6 +116,7 @@ const svg_nodes = container
   .enter()
   .append("g")
   .attr("class", "node")
+  .attr("id", (d) => d.id)
   .call(drag)
   .on("dblclick", dblclick);
 
@@ -232,38 +233,125 @@ svg_nodes.on("mouseout", function () {
   svg_nodes.classed("downlighted", false);
 });
 
+function getLayout () {
+  return rubrowser.nodes.reduce((layout, elem) => {
+    if (elem.fx && elem.fy) {
+      layout.push({
+        id: elem.id,
+        x: elem.fx,
+        y: elem.fy,
+      });
+    }
+    return layout;
+  }, []);
+}
+
+function setLayout (layout) {
+  layout.forEach((pos) => {
+    var definition = node.filter(function (e) {
+      return e.id == pos.id;
+    });
+    definition.classed("fixed", true);
+
+    var datum = definition.data()[0];
+    if (datum) {
+      datum.fx = pos.x;
+      datum.fy = pos.y;
+    }
+  });
+}
+
+function getCheckBoxState (checkBoxId) {
+  return $(checkBoxId).is(":checked");
+}
+
+function setCheckBoxState (checkBoxId, state) {
+  $(checkBoxId).prop("checked", state);
+  $(checkBoxId).trigger("change");
+}
+
+function setCheckBoxes (checkboxes) {
+  Object.entries(checkboxes).forEach(([key, value]) => {
+    setCheckBoxState(`#${key}`, value);
+  });
+}
+
+function getTextAreaValue (textAreaId) {
+  return $(textAreaId).val();
+};
+
+function setTextAreaValue (textAreaId, value) {
+  $(textAreaId).val(value);
+  $(textAreaId).trigger("change");
+}
+
+function setTextAreas (textAreas) {
+  Object.entries(textAreas).forEach(([key, value]) => {
+    setTextAreaValue(`#${key}`, value);
+  });
+};
+
+function getRangeValue (rangeId) {
+  return $(rangeId).val();
+};
+
+function setRangeValue (rangeId, value) {
+  $(rangeId).val(value);
+  $(rangeId).trigger("change");
+};
+
+function setRanges (ranges) {
+  Object.entries(ranges).forEach(([key, value]) => {
+    setRangeValue(`#${key}`, value);
+  });
+};
+
 // Set up global variables
 const state = {
   get: () => {
-    const positions = [];
-    rubrowser.nodes.forEach((elem) => {
-      if (elem.fx && elem.fy) {
-        positions.push({
-          id: elem.id,
-          x: elem.fx,
-          y: elem.fy,
-        });
+    return {
+      layout: getLayout(),
+      checkboxes: {
+        highlight_modules: getCheckBoxState("#highlight_modules"),
+        highlight_classes: getCheckBoxState("#highlight_classes"),
+        ignore_modules: getCheckBoxState("#ignore_modules"),
+        ignore_classes: getCheckBoxState("#ignore_classes"),
+        hide_namespaces: getCheckBoxState("#hide_namespaces"),
+        hide_relations: getCheckBoxState("#hide_relations"),
+        enable_grouping: getCheckBoxState("#enable_grouping"),
+      },
+      textAreas: {
+        highlight_by_namespace: getTextAreaValue("#highlight_by_namespace"),
+        highlight_by_file_path: getTextAreaValue("#highlight_by_file_path"),
+        ignore_by_namespace: getTextAreaValue("#ignore_by_namespace"),
+        ignore_by_file_path: getTextAreaValue("#ignore_by_file_path"),
+      },
+      ranges: {
+        force_strength: getRangeValue("#force_strength"),
+        link_strength: getRangeValue("#link_strength"),
+        link_distance: getRangeValue("#link_distance"),
+        force_collide: getRangeValue("#force_collide"),
+        force_in_a_box_strength: getRangeValue("#force_in_a_box_strength"),
+        link_strength_intra_cluster: getRangeValue("#link_strength_intra_cluster"),
+        link_strength_inter_cluster: getRangeValue("#link_strength_inter_cluster"),
+        force_link_distance: getRangeValue("#force_link_distance"),
+        force_link_strength: getRangeValue("#force_link_strength"),
+        force_charge: getRangeValue("#force_charge"),
       }
-    });
-    return positions;
+    };
   },
 
-  set: (layout) => {
-    if (!layout) {
+  set: (config) => {
+
+    if (!config) {
       return;
     }
-    layout.forEach((pos) => {
-      var definition = node.filter(function (e) {
-        return e.id == pos.id;
-      });
-      definition.classed("fixed", true);
+    const { layout, checkboxes, textAreas, ranges } = config;
 
-      var datum = definition.data()[0];
-      if (datum) {
-        datum.fx = pos.x;
-        datum.fy = pos.y;
-      }
-    });
+    setLayout(layout);
+    setCheckBoxes(checkboxes);
+    setTextAreas(textAreas);
+    setRanges(ranges);
   },
 };
 
@@ -276,15 +364,20 @@ window.rubrowser = {
   svg_nodes: svg_nodes,
   svg_links: svg_links,
   state: state,
+  zoom: zoom,
 };
 
-rubrowser.state.set(layout);
+$( document ).ready(function() {
+  rubrowser.state.set(config);
+  simulation.alphaTarget(0.5).restart();
+});
+
 
 // const gTemplate = container.append("g").attr("class", "template");
 
 // simulation.force("group").drawTemplate(gTemplate);
 
-simulation.alphaTarget(0.5).restart();
+
 
 // End of Script --------------------------------
 
